@@ -2,6 +2,12 @@
 
 Simple utility to manage `/etc/hosts` file.
 
+## Installation
+
+```sh
+go get -u github.com/zenwalker/hosts
+```
+
 ## Examples
 
 ```sh
