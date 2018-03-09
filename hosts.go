@@ -13,6 +13,9 @@ import (
 // DebugFlag enables output to console instead of file.
 var DebugFlag bool
 
+// HostsFile is a path to the hosts file.
+var HostsFile string
+
 // Host describes the row in hosts file.
 type Host struct {
 	IP        string
@@ -21,7 +24,7 @@ type Host struct {
 
 // ReadHosts parses the /etc/hosts file.
 func ReadHosts(hosts *[]interface{}) {
-	contents, err := ioutil.ReadFile("/etc/hosts")
+	contents, err := ioutil.ReadFile(HostsFile)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -61,7 +64,7 @@ func WriteHosts(hosts []interface{}) {
 	}
 
 	contents := []byte(renderedHosts)
-	err := ioutil.WriteFile("/etc/hosts", contents, 0644)
+	err := ioutil.WriteFile(HostsFile, contents, 0644)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -79,11 +82,9 @@ func RenderHosts(hosts []interface{}) string {
 
 		case Host:
 			hostnames := strings.Join(v.Hostnames, " ")
-			row := v.IP + "\t" + hostnames
+			row := v.IP + "\t" + hostnames + "\n"
 			buf.WriteString(row)
 		}
-
-		buf.WriteString("\n")
 	}
 
 	return buf.String()
@@ -137,7 +138,8 @@ var rootCmd = &cobra.Command{
 }
 
 var cmdAddHost = &cobra.Command{
-	Use:  "add",
+	Use:  "add ip hostname [hostname ...]",
+	Short: "Add host to the hosts file",
 	Args: cobra.MinimumNArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		var hosts []interface{}
@@ -169,7 +171,8 @@ var cmdAddHost = &cobra.Command{
 }
 
 var cmdResolve = &cobra.Command{
-	Use:  "resolve",
+	Use:  "resolve ip",
+	Short: "Resolve hostname to IP address",
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		var hosts []interface{}
@@ -192,6 +195,7 @@ var cmdResolve = &cobra.Command{
 
 var cmdList = &cobra.Command{
 	Use:  "list",
+	Short: "List all hosts",
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		var hosts []interface{}
@@ -203,7 +207,8 @@ var cmdList = &cobra.Command{
 }
 
 var cmdRemoveIP = &cobra.Command{
-	Use:  "rmip",
+	Use:  "rmip ip",
+	Short: "Remove IP address from the hosts file.",
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		var hosts []interface{}
@@ -213,7 +218,7 @@ var cmdRemoveIP = &cobra.Command{
 		for i := len(hosts) - 1; i >= 0; i-- {
 			if host, ok := hosts[i].(Host); ok {
 				if host.IP == ip {
-					hosts = append(hosts[:i], hosts[i+1:]...)
+					hosts = append(hosts[:i], hosts[i+1:])
 				}
 			}
 		}
@@ -223,7 +228,8 @@ var cmdRemoveIP = &cobra.Command{
 }
 
 var cmdRemoveHost = &cobra.Command{
-	Use:  "rmhost",
+	Use:  "rmhost hostname [hostname ...]",
+	Short: "Remove hostname from the hosts file",
 	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		var hosts []interface{}
@@ -247,9 +253,10 @@ var cmdRemoveHost = &cobra.Command{
 	},
 }
 
-
 func main() {
 	rootCmd.PersistentFlags().BoolVarP(&DebugFlag, "debug", "d", false, "print output to console instead of file")
+	rootCmd.PersistentFlags().StringVarP(&HostsFile, "file", "f", "/etc/hosts", "path to the hosts file")
+
 	rootCmd.AddCommand(cmdList)
 	rootCmd.AddCommand(cmdResolve)
 	rootCmd.AddCommand(cmdAddHost)
